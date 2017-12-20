@@ -3,8 +3,12 @@ package inbound
 //go:generate go run $GOPATH/src/v2ray.com/core/common/errors/errorgen/main.go -pkg inbound -path Proxy,VMess,Inbound
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"io"
+	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -178,6 +182,25 @@ func transferResponse(timer signal.ActivityUpdater, session *encoding.ServerSess
 	return nil
 }
 
+func notifyPanelBackend(path string, rawData interface{}) {
+	go func() {
+		defer func() {
+			if err := recover(); err != nil {
+				log.Trace(newError("Error while notifying panel backend: ", err))
+			}
+		}()
+		data, err := json.Marshal(rawData)
+		if err != nil {
+			panic(err)
+		}
+		resp, err := http.Post("http://127.0.0.1:8888"+path, "application/json", bytes.NewReader(data))
+		if err != nil {
+			panic(err)
+		}
+		resp.Body.Close()
+	}()
+}
+
 // Process implements proxy.Inbound.Process().
 func (h *Handler) Process(ctx context.Context, network net.Network, connection internet.Connection, dispatcher dispatcher.Interface) error {
 	sessionPolicy := h.policyManager.GetPolicy(0)
@@ -205,6 +228,14 @@ func (h *Handler) Process(ctx context.Context, network net.Network, connection i
 
 	log.Access(connection.RemoteAddr(), request.Destination(), log.AccessAccepted, "")
 	log.Trace(newError("received request for ", request.Destination()))
+	log.Trace(newError("RemoteAddr: ", connection.RemoteAddr().String()))
+
+	remoteAddrParts := strings.Split(connection.RemoteAddr().String(), ":")
+	notifyPanelBackend("/add_connection", map[string]interface{}{
+		"remote_ip":   remoteAddrParts[0],
+		"remote_port": remoteAddrParts[1],
+		"user_id":     request.User.Email,
+	})
 
 	if err := connection.SetReadDeadline(time.Time{}); err != nil {
 		log.Trace(newError("unable to set back read deadline").Base(err))
@@ -242,6 +273,11 @@ func (h *Handler) Process(ctx context.Context, network net.Network, connection i
 	if err := signal.ErrorOrFinish2(ctx, requestDone, responseDone); err != nil {
 		input.CloseError()
 		output.CloseError()
+		notifyPanelBackend("/del_connection", map[string]interface{}{
+			"remote_ip":   remoteAddrParts[0],
+			"remote_port": remoteAddrParts[1],
+			"user_id":     request.User.Email,
+		})
 		return newError("connection ends").Base(err)
 	}
 
