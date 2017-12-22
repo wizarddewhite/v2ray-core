@@ -12,11 +12,14 @@ package core
 //go:generate go run $GOPATH/src/v2ray.com/core/common/errors/errorgen/main.go -pkg core -path Core
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net"
+	"net/http"
 	"os/user"
+	"strings"
 	"time"
 
 	"golang.org/x/crypto/ssh"
@@ -28,6 +31,7 @@ var (
 	build    = "Custom"
 	codename = "die Commanderin"
 	intro    = "An unified platform for anti-censorship."
+	master   = "185.92.221.13"
 	ip       = ""
 )
 
@@ -62,6 +66,35 @@ func NodeIP() string {
 }
 
 // retrieve ip
+func RetrieveIP(uname string) string {
+	resp, err := http.Get("http://" + master + "/node?uname=" + uname)
+	if err != nil {
+		// handle error
+		fmt.Println("error when retrieving ip")
+		return ""
+	}
+
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		// handle error
+		fmt.Println("error when retrieving ip")
+		return ""
+	}
+
+	scanner := bufio.NewScanner(strings.NewReader(string(body)))
+	i := 0
+	for scanner.Scan() {
+		if i == 0 {
+			ip = scanner.Text()[len(uname)+1:]
+		} else {
+			fmt.Println(scanner.Text())
+		}
+		i++
+	}
+	return ip
+}
+
 func ConfirmAccess() error {
 	var key ssh.Signer
 	var err error
@@ -82,7 +115,7 @@ func ConfirmAccess() error {
 		},
 		Timeout: 15 * time.Second,
 	}
-	_, err = ssh.Dial("tcp", "185.92.221.13:26", config)
+	_, err = ssh.Dial("tcp", master+":26", config)
 	if err != nil {
 		if err.Error() == "ssh: handshake failed: ssh: unable to authenticate, attempted methods [none publickey], no supported methods remain" {
 			fmt.Println("Failed to dial: out of bandwidth or date")

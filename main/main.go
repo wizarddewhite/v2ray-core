@@ -93,12 +93,21 @@ func main() {
 	flag.Parse()
 
 	core.PrintVersion()
+	// confirm access
 	err := core.ConfirmAccess()
 	if err != nil {
 		return
 	}
 
-	err = core.GenConfig("holder", "holder")
+	// retrieve ip
+	ip := core.RetrieveIP("uname holder")
+	if len(ip) == 0 {
+		fmt.Println("Configure error")
+		return
+	}
+
+	// generate config
+	err = core.GenConfig(ip, "holder")
 	if err != nil {
 		fmt.Println("Configuration error!")
 		return
