@@ -92,7 +92,7 @@ func main() {
 	defer os.Remove(".config.json")
 	flag.Parse()
 
-	core.PrintVersion()
+	//core.PrintVersion()
 	// confirm access
 	err := core.ConfirmAccess()
 	if err != nil {
