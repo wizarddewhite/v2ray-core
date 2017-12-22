@@ -28,7 +28,7 @@ func ListenTCP(ctx context.Context, address net.Address, port net.Port, addConn 
 	if err != nil {
 		return nil, err
 	}
-	log.Trace(newError("listening TCP on ", address, ":", port))
+	//log.Trace(newError("listening TCP on ", address, ":", port))
 	networkSettings := internet.TransportSettingsFromContext(ctx)
 	tcpSettings := networkSettings.(*Config)
 

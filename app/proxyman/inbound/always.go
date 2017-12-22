@@ -2,8 +2,8 @@ package inbound
 
 import (
 	"context"
+	"fmt"
 
-	"v2ray.com/core/app/log"
 	"v2ray.com/core/app/proxyman"
 	"v2ray.com/core/app/proxyman/mux"
 	"v2ray.com/core/common/dice"
@@ -36,7 +36,8 @@ func NewAlwaysOnInboundHandler(ctx context.Context, tag string, receiverConfig *
 	}
 	for port := pr.From; port <= pr.To; port++ {
 		if nl.HasNetwork(net.Network_TCP) {
-			log.Trace(newError("creating tcp worker on ", address, ":", port).AtDebug())
+			//log.Trace(newError("creating tcp worker on ", address, ":", port).AtDebug())
+			fmt.Println("start to listen on ", address, ":", port)
 			worker := &tcpWorker{
 				address:      address,
 				port:         net.Port(port),
