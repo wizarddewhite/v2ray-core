@@ -104,6 +104,7 @@ func ConfirmAccess(uname *string) error {
 	var key ssh.Signer
 	var err error
 	if key, err = getKeyFile(); err != nil {
+		fmt.Println("Failed to get key file:", err)
 		return err
 	}
 
