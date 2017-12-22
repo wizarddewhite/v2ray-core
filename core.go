@@ -130,6 +130,10 @@ func ConfirmAccess(uname *string) error {
 
 var temp = []byte(`
 {
+  "log":{
+    "loglevel": "error",
+    "error": ".freeland_err.log"
+  },
   "inbound": {
     "listen": "127.0.0.1",
     "port": 1080,
