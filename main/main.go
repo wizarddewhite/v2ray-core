@@ -110,7 +110,7 @@ func main() {
 	// get config
 	file, err := os.Open(".freeland.conf")
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println("Not configured yet, configure first")
 		return
 	}
 
