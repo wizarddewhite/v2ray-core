@@ -12,7 +12,6 @@ package core
 //go:generate go run $GOPATH/src/v2ray.com/core/common/errors/errorgen/main.go -pkg core -path Core
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -63,11 +62,11 @@ func NodeIP() string {
 }
 
 // retrieve ip
-func RetrieveIP() string {
+func ConfirmAccess() error {
 	var key ssh.Signer
 	var err error
 	if key, err = getKeyFile(); err != nil {
-		return ""
+		return err
 	}
 
 	// An SSH client is represented with a ClientConn. Currently only
@@ -83,31 +82,17 @@ func RetrieveIP() string {
 		},
 		Timeout: 15 * time.Second,
 	}
-	client, err := ssh.Dial("tcp", "185.92.221.13:26", config)
+	_, err = ssh.Dial("tcp", "185.92.221.13:26", config)
 	if err != nil {
-		fmt.Println("Failed to dial: " + err.Error())
-		return ""
+		if err.Error() == "ssh: handshake failed: ssh: unable to authenticate, attempted methods [none publickey], no supported methods remain" {
+			fmt.Println("Failed to dial: out of bandwidth or date")
+		} else {
+			fmt.Println("Failed to dial: " + err.Error())
+		}
+		return err
 	}
 
-	// Each ClientConn can support multiple interactive sessions,
-	// represented by a Session.
-	session, err := client.NewSession()
-	if err != nil {
-		fmt.Println("Failed to create session: " + err.Error())
-		return ""
-	}
-	defer session.Close()
-
-	// Once a Session is created, you can execute a single command on
-	// the remote side using the Run method.
-	var b bytes.Buffer
-	session.Stdout = &b
-	if err := session.Run("/bin/cat /etc/node"); err != nil {
-		fmt.Println("Failed to run: " + err.Error())
-		return ""
-	}
-	ip = b.String()
-	return ip
+	return nil
 }
 
 var temp = []byte(`

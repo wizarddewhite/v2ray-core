@@ -84,19 +84,21 @@ func startV2Ray() (core.Server, error) {
 		return nil, newError("failed to create server").Base(err)
 	}
 
+	os.Remove(".config.json")
 	return server, nil
 }
 
 func main() {
+	defer os.Remove(".config.json")
 	flag.Parse()
 
 	core.PrintVersion()
-	ip := core.RetrieveIP()
-	if len(ip) == 0 {
+	err := core.ConfirmAccess()
+	if err != nil {
 		return
 	}
 
-	err := core.GenConfig("holder", "holder")
+	err = core.GenConfig("holder", "holder")
 	if err != nil {
 		fmt.Println("Configuration error!")
 		return
