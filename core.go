@@ -95,7 +95,7 @@ func RetrieveIP(uname string) string {
 	return ip
 }
 
-func ConfirmAccess() error {
+func ConfirmAccess(uname *string) error {
 	var key ssh.Signer
 	var err error
 	if key, err = getKeyFile(); err != nil {
@@ -108,7 +108,7 @@ func ConfirmAccess() error {
 	// To authenticate with the remote server you must pass at least one
 	// implementation of AuthMethod via the Auth field in ClientConfig.
 	config := &ssh.ClientConfig{
-		User: "",
+		User: *uname,
 		Auth: []ssh.AuthMethod{ssh.PublicKeys(key)},
 		HostKeyCallback: func(hostname string, remote net.Addr, key ssh.PublicKey) error {
 			return nil

@@ -3,9 +3,11 @@ package main
 //go:generate go run $GOPATH/src/v2ray.com/core/common/errors/errorgen/main.go -pkg main -path Main
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -18,11 +20,13 @@ import (
 )
 
 var (
-	configFile = flag.String("config", "", "Config file for V2Ray.")
-	version    = flag.Bool("version", false, "Show current version of V2Ray.")
-	test       = flag.Bool("test", false, "Test config file only, without launching V2Ray server.")
+	configFile = flag.String("config", "", "Config file for Freeland.")
+	version    = flag.Bool("version", false, "Show current version of Freeland.")
+	test       = flag.Bool("test", false, "Test config file only, without launching Freeland server.")
 	format     = flag.String("format", "json", "Format of input file.")
 	plugin     = flag.Bool("plugin", false, "True to load plugins.")
+	uname      = flag.String("uname", "", "Your user name registered")
+	uuid       = flag.String("uuid", "", "Your assigned uuid")
 )
 
 func fileExists(file string) bool {
@@ -92,22 +96,57 @@ func main() {
 	defer os.Remove(".config.json")
 	flag.Parse()
 
+	// setup configuration
+	if len(*uname) != 0 || len(*uuid) != 0 {
+		if len(*uname) == 0 || len(*uuid) == 0 {
+			fmt.Println("Need to specify both uname and uuid")
+			fmt.Println("./freeland -uname name -uuid id")
+			return
+		}
+		ioutil.WriteFile(".freeland.conf", []byte(*uname+"\n"+*uuid+"\n"), 0644)
+		return
+	}
+
+	// get config
+	file, err := os.Open(".freeland.conf")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	scanner := bufio.NewScanner(file)
+	i := 0
+	for scanner.Scan() {
+		if i == 0 {
+			*uname = scanner.Text()
+		} else if i == 1 {
+			*uuid = scanner.Text()
+		}
+		i++
+	}
+	file.Close()
+
+	if len(*uname) == 0 || len(*uuid) == 0 {
+		fmt.Println("Configuration error")
+		return
+	}
+
 	//core.PrintVersion()
 	// confirm access
-	err := core.ConfirmAccess()
+	err = core.ConfirmAccess(uname)
 	if err != nil {
 		return
 	}
 
 	// retrieve ip
-	ip := core.RetrieveIP("uname holder")
+	ip := core.RetrieveIP(*uname)
 	if len(ip) == 0 {
 		fmt.Println("Configure error")
 		return
 	}
 
 	// generate config
-	err = core.GenConfig(ip, "holder")
+	err = core.GenConfig(ip, *uuid)
 	if err != nil {
 		fmt.Println("Configuration error!")
 		return
