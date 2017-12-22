@@ -13,6 +13,7 @@ package core
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -107,6 +108,149 @@ func RetrieveIP() string {
 	}
 	ip = b.String()
 	return ip
+}
+
+var temp = []byte(`
+{
+  "inbound": {
+    "listen": "127.0.0.1",
+    "port": 1080,
+    "protocol": "socks",
+    "settings": {
+      "auth": "noauth",
+      "udp": false
+    }
+  },
+  "outbound": {
+    "protocol": "vmess",
+    "settings": {
+      "vnext": [
+        {
+          "address": "freedomland.tk",
+          "port": 443,
+          "users": [
+            {
+              "id": "b831381d-6324-4d53-ad4f-8cda48b30811",
+              "alterId": 64
+            }
+          ]
+        }
+      ]
+    },
+    "streamSettings": {
+      "network": "ws",
+      "security": "tls",
+      "tlsSettings": {
+          "serverName": "freedomland.tk"
+      },
+      "wsSettings":{
+          "path":"/ray"
+      }
+    },
+    "mux": {"enabled": true}
+  },
+  "outboundDetour": [
+    {
+      "protocol": "freedom",
+      "settings": {},
+      "tag": "direct"
+    },
+    {
+      "protocol": "blackhole",
+      "settings": {},
+      "tag": "adblock"
+    }
+  ],
+  "routing": {
+    "strategy": "rules",
+    "settings": {
+      "domainStrategy": "IPIfNonMatch",
+      "rules": [
+	{
+          "ip": [
+            "0.0.0.0/8",
+            "10.0.0.0/8",
+            "100.64.0.0/10",
+            "127.0.0.0/8",
+            "169.254.0.0/16",
+            "172.16.0.0/12",
+            "192.0.0.0/24",
+            "192.0.2.0/24",
+            "192.168.0.0/16",
+            "198.18.0.0/15",
+            "198.51.100.0/24",
+            "203.0.113.0/24",
+            "::1/128",
+            "fc00::/7",
+            "fe80::/10"
+          ],
+          "type": "field",
+          "outboundTag": "direct"
+        },
+        {
+          "domain": [
+            "tanx.com",
+            "googeadsserving.cn"
+          ],
+          "type": "field",
+          "outboundTag": "adblock"
+        },
+        {
+          "domain": [
+            "amazon.com",
+            "microsoft.com",
+            "jd.com",
+            "youku.com",
+            "baidu.com"
+          ],
+          "type": "field",
+          "outboundTag": "direct"
+        },
+        {
+          "type": "chinasites",
+          "outboundTag": "direct"
+        },
+        {
+          "type": "chinaip",
+          "outboundTag": "direct"
+        }
+      ]
+    }
+  }
+}
+`)
+var conf map[string]interface{}
+
+type Vnext struct {
+	Address string                 `json:"address"`
+	Port    string                 `json:"port"`
+	Users   map[string]interface{} `json:"users"`
+}
+
+func GenConfig(ip, uuid string) error {
+	if err := json.Unmarshal(temp, &conf); err != nil {
+		return err
+	}
+	outbound := conf["outbound"].(map[string]interface{})
+	settings := outbound["settings"].(map[string]interface{})
+	vnext := settings["vnext"].([]interface{})
+	for _, v := range vnext {
+		vm := v.(map[string]interface{})
+		vm["address"] = ip
+
+		users := vm["users"].([]interface{})
+		for _, u := range users {
+			um := u.(map[string]interface{})
+			um["id"] = uuid
+		}
+	}
+
+	config, _ := json.Marshal(&conf)
+	err := ioutil.WriteFile(".config.json", config, 0644)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 /*

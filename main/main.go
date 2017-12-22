@@ -96,6 +96,12 @@ func main() {
 		return
 	}
 
+	err := core.GenConfig("holder", "holder")
+	if err != nil {
+		fmt.Println("Configuration error!")
+		return
+	}
+
 	if *version {
 		return
 	}
@@ -107,6 +113,7 @@ func main() {
 		}
 	}
 
+	*configFile = ".config.json"
 	server, err := startV2Ray()
 	if err != nil {
 		fmt.Println(err.Error())
