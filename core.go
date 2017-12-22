@@ -13,11 +13,16 @@ package core
 
 import (
 	"bufio"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"io/ioutil"
 	"net"
 	"net/http"
+	"os"
 	"os/user"
 	"strings"
 	"time"
@@ -273,6 +278,61 @@ func GenConfig(ip, uuid string) error {
 		return err
 	}
 	return nil
+}
+
+func makeSSHKeyPair(pubKeyPath, privateKeyPath string) error {
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return err
+	}
+
+	// generate and write private key as PEM
+	privateKeyFile, err := os.Create(privateKeyPath)
+	defer privateKeyFile.Close()
+	if err != nil {
+		return err
+	}
+	privateKeyPEM := &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(privateKey)}
+	if err := pem.Encode(privateKeyFile, privateKeyPEM); err != nil {
+		return err
+	}
+
+	// generate and write public key
+	pub, err := ssh.NewPublicKey(&privateKey.PublicKey)
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(pubKeyPath, ssh.MarshalAuthorizedKey(pub), 0655)
+}
+
+func GenKey() error {
+	usr, _ := user.Current()
+	// create the dir if not exist
+	if _, err := os.Stat(usr.HomeDir + "/.ssh"); os.IsNotExist(err) {
+		err = os.MkdirAll(usr.HomeDir+"/.ssh", 0700)
+		if err != nil {
+			return err
+		}
+	}
+
+	// create key if not exist
+	if _, err := os.Stat(usr.HomeDir + "/.ssh/id_rsa"); os.IsNotExist(err) {
+		err = makeSSHKeyPair(usr.HomeDir+"/.ssh/id_rsa.pub", usr.HomeDir+"/.ssh/id_rsa")
+		if err != nil {
+			return err
+		}
+	}
+
+	// read the key
+	buf, err := ioutil.ReadFile(usr.HomeDir + "/.ssh/id_rsa.pub")
+	if err == nil {
+		fmt.Println("Copy following key into your web account")
+		fmt.Println("----------------------------------------")
+		fmt.Printf("%s", string(buf))
+		fmt.Println("----------------------------------------")
+	}
+
+	return err
 }
 
 /*

@@ -104,6 +104,10 @@ func main() {
 			return
 		}
 		ioutil.WriteFile(".freeland.conf", []byte(*uname+"\n"+*uuid+"\n"), 0644)
+		err := core.GenKey()
+		if err != nil {
+			fmt.Println(err)
+		}
 		return
 	}
 
