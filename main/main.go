@@ -91,6 +91,10 @@ func main() {
 	flag.Parse()
 
 	core.PrintVersion()
+	ip := core.RetrieveIP()
+	if len(ip) == 0 {
+		return
+	}
 
 	if *version {
 		return

