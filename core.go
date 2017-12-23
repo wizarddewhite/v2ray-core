@@ -23,7 +23,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"os/user"
 	"strings"
 	"time"
 
@@ -38,6 +37,8 @@ var (
 	intro    = "An unified platform for anti-censorship."
 	master   = "185.92.221.13"
 	ip       = ""
+	pubkey   = ".freeland_pubkey"
+	privkey  = ".freeland_privkey"
 )
 
 // Version returns V2Ray's version as a string, in the form of "x.y.z" where x, y and z are numbers.
@@ -53,8 +54,7 @@ func PrintVersion() {
 }
 
 func getKeyFile() (key ssh.Signer, err error) {
-	usr, _ := user.Current()
-	file := usr.HomeDir + "/.ssh/id_rsa"
+	file := privkey
 	buf, err := ioutil.ReadFile(file)
 	if err != nil {
 		return
@@ -307,25 +307,16 @@ func makeSSHKeyPair(pubKeyPath, privateKeyPath string) error {
 }
 
 func GenKey() error {
-	usr, _ := user.Current()
-	// create the dir if not exist
-	if _, err := os.Stat(usr.HomeDir + "/.ssh"); os.IsNotExist(err) {
-		err = os.MkdirAll(usr.HomeDir+"/.ssh", 0700)
-		if err != nil {
-			return err
-		}
-	}
-
 	// create key if not exist
-	if _, err := os.Stat(usr.HomeDir + "/.ssh/id_rsa"); os.IsNotExist(err) {
-		err = makeSSHKeyPair(usr.HomeDir+"/.ssh/id_rsa.pub", usr.HomeDir+"/.ssh/id_rsa")
+	if _, err := os.Stat(privkey); os.IsNotExist(err) {
+		err = makeSSHKeyPair(pubkey, privkey)
 		if err != nil {
 			return err
 		}
 	}
 
 	// read the key
-	buf, err := ioutil.ReadFile(usr.HomeDir + "/.ssh/id_rsa.pub")
+	buf, err := ioutil.ReadFile(pubkey)
 	if err == nil {
 		fmt.Println("Copy following key into your web account")
 		fmt.Println("----------------------------------------")
