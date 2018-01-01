@@ -10,7 +10,7 @@ import (
 )
 
 func jsonToProto(input io.Reader) (*core.Config, error) {
-	v2ctl := platform.GetToolLocation("v2ctl")
+	v2ctl := platform.GetToolLocation("free2ctl")
 	_, err := os.Stat(v2ctl)
 	if err != nil {
 		return nil, err
