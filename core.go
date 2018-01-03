@@ -35,7 +35,7 @@ var (
 	build    = "Custom"
 	codename = "die Commanderin"
 	intro    = "An unified platform for anti-censorship."
-	master   = "185.92.221.13"
+	master   = "freedomland.tk"
 	ip       = ""
 	pubkey   = ".freeland_pubkey"
 	privkey  = ".freeland_privkey"
