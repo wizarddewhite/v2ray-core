@@ -31,3 +31,26 @@ This repo relies on the following third-party projects:
   * [gorilla/websocket](https://github.com/gorilla/websocket)
 * For testing only:
   * [h12w/socks](https://github.com/h12w/socks)
+
+# Build Tip
+
+Put two projects in $GOPATH/src/v2ray.com
+
+   * https://github.com/wizarddewhite/v2ray-core.git
+   * https://github.com/wizarddewhite/ext.git
+
+The directory would look like this:
+
+```
+$ ls v2ray.com
+core ext
+```
+
+Now you can build it.
+
+```
+cd ext/tools/build/vbuild
+go install
+cd $GOPATH
+./bin/vbuild
+```
